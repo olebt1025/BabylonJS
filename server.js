@@ -12,7 +12,7 @@ const players = {};
 io.on("connection", (socket) => {
     console.log("Player joined:", socket.id);
 
-    players[socket.id] = { x: 0, z: 0 };
+    players[socket.id] = { x: 0, z: 0, y:1 };
 
     socket.on("move", (data) => {
         players[socket.id] = data;
