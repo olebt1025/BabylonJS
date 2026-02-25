@@ -3,6 +3,10 @@ const socket = io(); // auto-connects to the same server
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 
+window.addEventListener("resize", () => {
+    engine.resize();
+});
+
 // Generate a random player name for this session
 const myName = "Player" + Math.floor(Math.random() * 1000);
 
@@ -77,6 +81,14 @@ const createScene = () => {
         if (e.key === "d") x += 0.1;
 
         socket.emit("move", { x, z, name: myName });
+    });
+
+    // Update camera to follow your cube each frame
+    scene.onBeforeRenderObservable.add(() => {
+        if (myCube) {
+            // ArcRotateCamera target follows the cube
+            camera.target = myCube.position.clone();
+        }
     });
 
     return scene;
