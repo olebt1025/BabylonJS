@@ -11,7 +11,7 @@ const createScene = () => {
 
     const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
 
-    const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 10, height: 10}, scene);
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 100, height: 100}, scene);
 
     const playerMeshes = {};
 
