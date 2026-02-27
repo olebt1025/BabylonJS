@@ -50,28 +50,28 @@ joinBtn.addEventListener("click", () => {
 // ============================
 function startGame() {
     const scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color3(0.5, 0.8, 1.0); // light blue sky
+    scene.clearColor = new BABYLON.Color3(0.7, 0.8, 1.0); // light blue sky
 
     // ============================
     // Lighting
     // ============================
     const light = new BABYLON.HemisphericLight(
         "light",
-        new BABYLON.Vector3(0, 1, 0),
+        new BABYLON.Vector3(10, 1, 0),
         scene
     );
-    light.intensity = .3;
+    light.intensity = 2;
 
     // ============================
     // Ground
     // ============================
     const ground = BABYLON.MeshBuilder.CreateGround(
         "ground",
-        { width: 100, height: 100 },
+        { width: 100, height: 100},
         scene
     );
     const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
-    groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.6, 0.2);
+    groundMat.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.2);
     ground.material = groundMat;
 
     // ============================
@@ -95,7 +95,7 @@ function startGame() {
     let myCube = null;
 
     let x = 0, z = 0;
-    const speed = 0.2;
+    const speed = 0.4;
     const LIMIT = 49;
 
     // ============================
@@ -121,7 +121,7 @@ function startGame() {
         for (let id in players) {
             // Create cube if it doesn't exist
             if (!playerMeshes[id]) {
-                const box = BABYLON.MeshBuilder.CreateBox(id, {}, scene);
+                const box = BABYLON.MeshBuilder.CreateBox(id, {size: 2}, scene);
 
                 // Set cube color
                 const mat = new BABYLON.StandardMaterial("mat" + id, scene);
@@ -131,8 +131,8 @@ function startGame() {
                 // --- NAMETAG ---
                 const namePlane = BABYLON.MeshBuilder.CreatePlane("name" + id, { size: 5 }, scene);
 
-                const dt = new BABYLON.DynamicTexture("dt" + id, { width: 512, height: 128 }, scene);
-                dt.drawText(players[id].name, null, 100, "bold 72px Arial", "white", "transparent");
+                const dt = new BABYLON.DynamicTexture("dt" + id, { width: 512, height: 228 }, scene);
+                dt.drawText(players[id].name, null, 10, "bold 182px Arial", "white", "transparent");
 
                 const nameMat = new BABYLON.StandardMaterial("nameMat" + id, scene);
                 nameMat.diffuseTexture = dt;
@@ -142,7 +142,8 @@ function startGame() {
                 nameMat.alpha = 1;
                 namePlane.material = nameMat;
 
-                namePlane.position.y = -10; // above cube
+                namePlane.position.z = 3;
+                namePlane.position.y = 2; // above cube
                 namePlane.parent = box;
                 namePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL; // always face camera
 
