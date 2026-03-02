@@ -10,6 +10,7 @@ const engine = new BABYLON.Engine(canvas, true);
 engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
 window.addEventListener("resize", () => engine.resize());
 
+
 // ============================
 // Persistent Player ID
 // ============================
@@ -18,6 +19,7 @@ if (!playerId) {
     playerId = crypto.randomUUID();
     localStorage.setItem("playerId", playerId);
 }
+
 
 // ============================
 // UI Elements
@@ -32,11 +34,38 @@ let myName;
 let myColor;
 
 // ============================
+// Auto Rejoin If Stored
+// ============================
+
+const savedName = localStorage.getItem("playerName");
+const savedColor = localStorage.getItem("playerColor");
+
+const savedX = localStorage.getItem("playerX");
+const savedZ = localStorage.getItem("playerZ");
+
+if (savedName && savedColor) {
+
+    myName = savedName;
+    myColor = savedColor;
+
+    menu.style.display = "none";
+    canvas.style.display = "block";
+
+    socket = io();
+    startGame();
+}
+
+
+// ============================
 // Join Game
 // ============================
 joinBtn.addEventListener("click", () => {
+
     myName = nameInput.value || "Player";
-    myColor = colorInput.value || "#ff0000"; // default red
+    myColor = colorInput.value || "#ff0000";
+
+    localStorage.setItem("playerName", myName);
+    localStorage.setItem("playerColor", myColor);
 
     menu.style.display = "none";
     canvas.style.display = "block";
@@ -45,12 +74,17 @@ joinBtn.addEventListener("click", () => {
     startGame();
 });
 
+
 // ============================
 // Main Game Function
 // ============================
 function startGame() {
+
     const scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color3(0.7, 0.8, 1.0); // light blue sky
+    scene.clearColor = new BABYLON.Color3(0.7, 0.8, 1.0);
+
+    scene.collisionsEnabled = true;
+
 
     // ============================
     // Lighting
@@ -62,17 +96,22 @@ function startGame() {
     );
     light.intensity = 2;
 
+
     // ============================
     // Ground
     // ============================
     const ground = BABYLON.MeshBuilder.CreateGround(
         "ground",
-        { width: 100, height: 100},
+        { width: 100, height: 100 },
         scene
     );
+
     const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
     groundMat.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.2);
     ground.material = groundMat;
+
+    ground.checkCollisions = true;
+
 
     // ============================
     // Top-Down Fixed Camera
@@ -82,11 +121,13 @@ function startGame() {
         new BABYLON.Vector3(0, 120, 0),
         scene
     );
+
     camera.setTarget(new BABYLON.Vector3(0, 0, 0));
     camera.rotation.x = Math.PI / 2;
     camera.rotation.y = 0;
     camera.rotation.z = 0;
-    camera.inputs.clear(); // disable mouse controls
+    camera.inputs.clear();
+
 
     // ============================
     // Player Storage
@@ -94,16 +135,17 @@ function startGame() {
     const playerMeshes = {};
     let myCube = null;
 
-    let x = 0, z = 0;
     const speed = 0.4;
-    const LIMIT = 49;
+
 
     // ============================
     // Keyboard Input
     // ============================
     const keys = {};
+
     window.addEventListener("keydown", e => keys[e.key] = true);
     window.addEventListener("keyup", e => keys[e.key] = false);
+
 
     // ============================
     // Tell Server We Joined
@@ -111,61 +153,95 @@ function startGame() {
     socket.emit("join", {
         id: playerId,
         name: myName,
-        color: myColor
+        color: myColor,
+        x: savedX ? parseFloat(savedX) : 0,
+        z: savedZ ? parseFloat(savedZ) : 0
     });
+
 
     // ============================
     // Server Player Updates
     // ============================
     socket.on("players", (players) => {
-        for (let id in players) {
-            // Create cube if it doesn't exist
-            if (!playerMeshes[id]) {
-                const box = BABYLON.MeshBuilder.CreateBox(id, {size: 2}, scene);
 
-                // Set cube color
+        for (let id in players) {
+
+            // ============================
+            // Create player if missing
+            // ============================
+            if (!playerMeshes[id]) {
+
+                const box = BABYLON.MeshBuilder.CreateBox(id, { size: 2 }, scene);
+
+                // Enable collision
+                box.checkCollisions = true;
+                box.ellipsoid = new BABYLON.Vector3(1, 1, 1);
+
+                // Material / Color
                 const mat = new BABYLON.StandardMaterial("mat" + id, scene);
                 mat.diffuseColor = BABYLON.Color3.FromHexString(players[id].color);
                 box.material = mat;
 
-                // --- NAMETAG ---
-                const namePlane = BABYLON.MeshBuilder.CreatePlane("name" + id, { size: 5 }, scene);
+                // ============================
+                // Nametag
+                // ============================
+                const namePlane = BABYLON.MeshBuilder.CreatePlane(
+                    "name" + id,
+                    { size: 4 },
+                    scene
+                );
 
-                const dt = new BABYLON.DynamicTexture("dt" + id, { width: 512, height: 228 }, scene);
-                dt.drawText(players[id].name, null, 10, "bold 182px Arial", "white", "transparent");
+                const dt = new BABYLON.DynamicTexture(
+                    "dt" + id,
+                    { width: 512, height: 128 },
+                    scene
+                );
+
+                dt.drawText(
+                    players[id].name,
+                    null,
+                    90,
+                    "bold 72px Arial",
+                    "white",
+                    "transparent"
+                );
 
                 const nameMat = new BABYLON.StandardMaterial("nameMat" + id, scene);
                 nameMat.diffuseTexture = dt;
-                nameMat.diffuseTexture.hasAlpha = true; // important for transparency
+                nameMat.diffuseTexture.hasAlpha = true;
+                nameMat.useAlphaFromDiffuseTexture = true;
                 nameMat.emissiveColor = BABYLON.Color3.White();
                 nameMat.backFaceCulling = false;
-                nameMat.alpha = 1;
+
                 namePlane.material = nameMat;
-
-                namePlane.position.z = 3;
-                namePlane.position.y = 2; // above cube
+                namePlane.position.y = 2.5;
                 namePlane.parent = box;
-                namePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL; // always face camera
+                namePlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
 
-                playerMeshes[id] = { cube: box, nameMesh: namePlane };
+                playerMeshes[id] = {
+                    cube: box,
+                    nameMesh: namePlane
+                };
 
-                if (id === playerId) myCube = box;
+                if (id === playerId) {
+                    myCube = box;
+                }
             }
 
+            // ============================
+            // Smooth other players
+            // ============================
             const mesh = playerMeshes[id].cube;
 
-            if (id === playerId) {
-                // Snap your own cube to local position
-                mesh.position.x = x;
-                mesh.position.z = z;
-            } else {
-                // Smooth other players
+            if (id !== playerId) {
                 mesh.position.x += (players[id].x - mesh.position.x) * 0.2;
                 mesh.position.z += (players[id].z - mesh.position.z) * 0.2;
             }
         }
 
+        // ============================
         // Remove disconnected players
+        // ============================
         for (let id in playerMeshes) {
             if (!players[id]) {
                 playerMeshes[id].cube.dispose();
@@ -173,27 +249,36 @@ function startGame() {
                 delete playerMeshes[id];
             }
         }
+
     });
+
 
     // ============================
     // Main Update Loop
     // ============================
     scene.onBeforeRenderObservable.add(() => {
+
         if (!myCube) return;
 
-        // World-axis movement
-        if (keys["w"]) z += speed;
-        if (keys["s"]) z -= speed;
-        if (keys["a"]) x -= speed;
-        if (keys["d"]) x += speed;
+        let moveVector = BABYLON.Vector3.Zero();
 
-        // Clamp inside map
-        x = Math.max(-LIMIT, Math.min(LIMIT, x));
-        z = Math.max(-LIMIT, Math.min(LIMIT, z));
+        if (keys["w"]) moveVector.z += speed;
+        if (keys["s"]) moveVector.z -= speed;
+        if (keys["a"]) moveVector.x -= speed;
+        if (keys["d"]) moveVector.x += speed;
 
-        // Send updated position to server
-        socket.emit("move", { x, z });
+        myCube.moveWithCollisions(moveVector);
+
+        socket.emit("move", {
+            x: myCube.position.x,
+            z: myCube.position.z
+        });
+
+        localStorage.setItem("playerX", myCube.position.x);
+        localStorage.setItem("playerZ", myCube.position.z);
+
     });
+
 
     // ============================
     // Start Rendering
@@ -201,4 +286,7 @@ function startGame() {
     engine.runRenderLoop(() => {
         scene.render();
     });
+
 }
+
+

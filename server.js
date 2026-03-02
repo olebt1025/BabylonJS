@@ -18,27 +18,20 @@ io.on("connection", (socket) => {
 
         if (!players[id]) {
             players[id] = {
-                x: 0,
-                z: 0,
+                x: typeof data.x === "number" ? data.x : 0,
+                z: typeof data.z === "number" ? data.z : 0,
                 name: data.name,
                 color: data.color
             };
+        } else {
+            // If player already exists, update name/color
+            players[id].name = data.name;
+            players[id].color = data.color;
         }
 
         socket.playerId = id;
     });
 
-    socket.on("move", (data) => {
-        if (socket.playerId && players[socket.playerId]) {
-            players[socket.playerId].x = data.x;
-            players[socket.playerId].z = data.z;
-        }
-    });
-
-    socket.on("disconnect", () => {
-        // DO NOTHING
-        // Player stays in memory
-    });
 });
 
 setInterval(() => {
